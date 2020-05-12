@@ -5,7 +5,7 @@ def help()
   puts "\nEasily parse the results of Nmap's 'smb-enum-shares' NSE script."
   puts "Compatible with .nmap files or copy-pasted 'smb-enum-shares' output."
   puts "\nUsage: #{$0} [file1] [file2] [file3] ... [filex]"
-   puts"  -h\t\tDisplay this menu and exit."
+  puts "  -h\t\tDisplay this menu and exit."
   puts "  -o [scheme]\tNaming scheme for the output file(s). For multiple\n\t\tinput files, the name of each input file is appended\n\t\tto the scheme for the respective outpute file.\n\t\tDefault scheme: 'parsed_[inputfile]'"
   puts "\n  Example: #{$0} nmap_smb_results1.txt nmap_smb_results2.txt"
   puts "  Example: #{$0} scan1.txt -o results"
