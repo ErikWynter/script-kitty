@@ -194,9 +194,10 @@ class Showdan
           if node.search('th').text.include? 'CVE'
             cve = node.search('th').text
             cvss = cve_details(cve)
-            unless cve.to_s.strip().empty?
-              cve_hash[cve] ? nil : cve_hash[cve] = cvss #map cve with cvss if it's not already in cve_hash
+            if cvss.to_s.strip().empty?
+              cvss = "N/A"
             end
+            cve_hash[cve] ? nil : cve_hash[cve] = cvss #map cve with cvss if it's not already in cve_hash
             descr = node.search('td').text
             vuln_hash[cve] = [cvss, descr]
           end
