@@ -27,7 +27,7 @@ def help(logo,print_help=false)
     opts.on("-s", "--scheme  NAMING_SCHEME", "Naming scheme for the output file(s). Default: '[IP]_showdan.txt'") do |scheme|
       options['scheme'] = scheme;
     end
-    opts.on("-p", "--p_info", "Write all port info listed by Shodan.io (eg HTTP headers) to a file.") do |p_info|
+    opts.on("-p", "--p_info", "Write detailed port info listed by Shodan.io (eg HTTP headers) to a file.") do |p_info|
       options['p_info'] = p_info;
     end
   end
