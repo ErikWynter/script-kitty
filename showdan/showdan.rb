@@ -126,7 +126,18 @@ class Showdan
     return
   end
 
-  def shodan_check(ip, ports_hash,p_info,scheme)
+  def cve_details(cve)
+    url = "https://www.cvedetails.com/cve/" + cve
+    response = HTTParty.get(url)
+    if response.body.nil? || response.body.empty?
+      return
+    end
+    doc = Nokogiri::HTML(response)
+    cvss = doc.search('div.cvssbox').text
+  end
+
+
+  def shodan_check(ip, ports_hash,p_info,scheme,cve_hash)
     out_file = @out_file + ip.to_s + "_" + scheme
     port_info_file = @out_file + ip.to_s + "_port_info_" + scheme
 
@@ -173,7 +184,6 @@ class Showdan
         end
       end
       puts "|"
-      #create file for each port with IP?
 
       vuln_hash = {}
       if doc.css("i.fa.fa-exclamation-triangle").empty?
@@ -183,20 +193,24 @@ class Showdan
         doc.css('tr').each do |node|
           if node.search('th').text.include? 'CVE'
             cve = node.search('th').text
+            cvss = cve_details(cve)
+            unless cve.to_s.strip().empty?
+              cve_hash[cve] ? nil : cve_hash[cve] = cvss #map cve with cvss if it's not already in cve_hash
+            end
             descr = node.search('td').text
-            vuln_hash[cve] = descr
+            vuln_hash[cve] = [cvss, descr]
           end
         end
         f.write("Potential CVE(s) (#{vuln_hash.length}):\n")
         puts ("|-Potential CVE(s) (#{vuln_hash.length}):")
         vuln_hash.each do |key,value|
-          f.write("#{key}\n")
-          f.write("#{value}\n")
-          puts "|--#{key}"
+          f.write("#{key} - CVSS: #{value[0]}\n")
+          f.write("#{value[1]}\n")
+          puts "|--#{key}\tCVSS: #{value[0]}"
         end
       end
     }
-    ports_hash
+    [ports_hash, cve_hash]
   end
 end
 
@@ -263,9 +277,12 @@ if $0 == __FILE__
 
   #start performing shodan lookups
   ports_hash = {} #hash to map ports with all IPs that have that port open, used to create files later
+  cve_hash = {} #hash to map cves to cvss scores, used to prevent unnecessary lookups on cvedetails.com for duplicate cves accross IPs
   ips.each do |ip|
     pr.print_info("Performing Shodan.io lookup for #{ip}...")
-    ports_hash = sho.shodan_check(ip,ports_hash,options['p_info'],options['scheme'])
+    results = sho.shodan_check(ip,ports_hash,options['p_info'],options['scheme'],cve_hash)
+    ports_hash = results[0]
+    cve_hash = results[1]
     puts "-" * 70
   end
 
