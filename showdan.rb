@@ -3,20 +3,44 @@
 BEGIN { $VERBOSE = nil } #to ignore HTTParty deprecation warning about response.nil which is caused by Nokogiri
 ##Warning[:deprecated] = false doesn't work with all ruby versions
 #if defined?(Warning) && Warning.respond_to?(:[]=)
-  #Warning[:deprecated] = false
+#  Warning[:deprecated] = false
 #end
 
-['getopt/std','httparty','nokogiri'].each(&method(:require))
-def help(logo)
-  logo.each { |item| puts item }
-  puts "\n  Usage: #{$0} -f /path/to/ips_and_domains.txt"
-  puts "\n  -f\tFile containing IP addresses and/or domain names"
-  puts "  -t\tComma-separated list of IP addresses and/or domain names"
-  puts "  -o\tExisting directory to store the results. If not specified, the\n\tresults will be stored in the present working directory."
-  puts "\n  Example: #{$0} -f my_ips_and_domains.txt -o /tmp"
-  puts "  Example: #{$0} -f ips_and_domains.txt -t 192.168.1.1,my.example.site"
-  puts "\n"
-  exit
+['optparse','httparty','nokogiri'].each(&method(:require))
+
+def help(logo,print_help=false)
+  options = {'scheme' => 'showdan.txt', 'p_info' => nil}
+  parser = OptionParser.new do |opts|
+    opts.banner = "Usage: #{$0} -f [path/to/targets.file] &&/|| -t [targets]"
+    opts.on("-h", "--help", "Display this menu and exit") do
+      print_help = true
+    end
+    opts.on("-f", "--file    TARGETS_FILE", "File containing target IP addresses") do |file|
+      options['file'] = file;
+    end
+    opts.on("-t", "--targets TARGETS", "Comma-separated list of target IP addresses\n\n    OPTIONAL:") do |targets|
+      options['targets'] = targets;
+    end
+    opts.on("-d", "--dir     OUTPUT_DIRECTORY", "Directory to store results. If it doesn't exit, Showdan will create it.") do |directory|
+      options['directory'] = directory;
+    end
+    opts.on("-s", "--scheme  NAMING_SCHEME", "Naming scheme for the output file(s). Default: '[IP]_showdan.txt'") do |scheme|
+      options['scheme'] = scheme;
+    end
+    opts.on("-p", "--p_info", "Write all port info listed by Shodan.io (eg HTTP headers) to a file.") do |p_info|
+      options['p_info'] = p_info;
+    end
+  end
+  parser.parse!
+
+  if print_help == true
+    logo.each { |item| puts item }
+    puts parser
+    puts "\n    Example: #{$0} -f my_target_ips.txt -d /tmp -p"
+    puts "    Example: #{$0} -t 192.168.1.1,192.168.1.2 -f ips.txt -s shodan.results\n\n"
+    exit
+  end
+  options
 end
 
 class Color_print
@@ -102,9 +126,9 @@ class Showdan
     return
   end
 
-  def shodan_check(ip, ports_hash)
-    out_file = @out_file + ip.to_s + "_showdan.txt"
-    port_info_file = @out_file + ip.to_s + "_port_info" + "_showdan.txt"
+  def shodan_check(ip, ports_hash,p_info,scheme)
+    out_file = @out_file + ip.to_s + "_" + scheme
+    port_info_file = @out_file + ip.to_s + "_port_info_" + scheme
 
     url = "https://shodan.io/host/"+ip.to_s
     response = HTTParty.get(url)
@@ -132,16 +156,22 @@ class Showdan
       |f| puts "-" *70 + "\n|IP: #{ip}\n|"
       f.write("Open ports (#{ports_info_hash.length}):\n")
       puts "|-Open ports (#{ports_info_hash.length}):"
-      # it should only write the port_info file if requested by the user
-      File.open(port_info_file, "w") {
-        |g| ports_info_hash.each do |port,info|
+      if p_info == true
+        File.open(port_info_file, "w") {
+          |g| ports_info_hash.each do |port,info|
+            f.write("#{port}/#{info[0]} - #{info[1]}\n")
+            g.write("-" *70 + "\n#{port}/#{info[0]} - #{info[1]}\n")
+            g.write("#{info[2]}\n\n")
+            puts "|--#{port}/#{info[0]} - #{info[1]}"  
+          end
+          g.write("-" *70 + "\n")
+        }
+      else
+        ports_info_hash.each do |port,info|
           f.write("#{port}/#{info[0]} - #{info[1]}\n")
-          g.write("-" *70 + "\n#{port}/#{info[0]} - #{info[1]}\n")
-          g.write("#{info[2]}\n\n")
-          puts "|--#{port}/#{info[0]} - #{info[1]}"
+          puts "|--#{port}/#{info[0]} - #{info[1]}"  
         end
-        g.write("-" *70 + "\n")
-      }
+      end
       puts "|"
       #create file for each port with IP?
 
@@ -170,8 +200,8 @@ class Showdan
   end
 end
 
-
 if $0 == __FILE__
+  pr = Color_print.new()
   line = "\n " + "#" * 70
   title = """     \e[1;32m               _          \e[1;31m__    __    \e[1;32m_             
                 ___| |__   ___\e[1;31m/ / /\\ \\ \\\e[1;32m__| | __ _ _ __  
@@ -179,47 +209,50 @@ if $0 == __FILE__
                \\__ \\ | | | (_) \e[1;31m\\  /\\  /\e[1;32m (_| | (_| | | | |
                |___/_| |_|\\___/ \e[1;31m\\/  \\/\e[1;32m \\__,_|\\__,_|_| |_|   
 
-                \e[1;34mversion 0.1 - \e[1;33mErik Wynter \e[1;34m(@WynterErik)\e[00m"""
-  logo = [line,title,line]
+                \e[1;34mversion 1.0 - \e[1;33mErik Wynter \e[1;34m(@WynterErik)\e[00m"""
+  logo = [line,title,line,"\n"]
+  options = help(logo)
 
-  if ARGV.length == 0
-    help(logo)
-  end
-  pr = Color_print.new()
-
-  opt = Getopt::Std.getopts("f:t:o:")
-  unless opt['f'] or opt['t']
-    pr.print_warning("Please specify target IPs and/or domains to check using the -f and/or -t switches. Quitting!") 
-    exit
+  unless options['file'] or options['targets']
+    pr.print_warning("Please provide at least one target IP or file using the -t or -f switch, respectively.")
+    pr.print_info("Loading help menu:")
+    help(logo,true)
   end
 
   targets = []
 
   #Add -f to targets if provided and file exists
-  if opt.include? 'f'
-    unless File.exists? opt['f']
+  if options['file']
+    unless File.exists? options['file']
       pr.print_warning("The file provided with -f does not exist. Please select a valid file. Quitting!")
       exit
     end
-  else
-    opt['f'] = nil
   end
 
-  #Add -t to targets if provided
-  unless opt.include? 't'
-    opt['t'] = nil 
-  end
+  ['file','targets'].each { |i| i ? targets.append(options[i]) : targets.append(nil) }
 
-  targets.append(opt['f'],opt['t'])
-
-  #set output directory to pwd if -o is not provided, and always append '/' unless the user has already done this
-  opt['o'] = "." if opt['o'].nil?
-  opt['o'] += "/" if opt['o'][-1] != "/"
-
-  #print logo and start
+  #print logo
   logo.each { |item| puts item }
-  puts
-  sho = Showdan.new(targets, opt['o'])
+
+  #if -d is provided, check if directory already exists, otherwise create it
+  if options['directory']
+    system("[ -d #{options['directory']} ]") 
+    unless $?.exitstatus == 0
+      system("mkdir #{options['directory']}")
+      unless $?.exitstatus == 0
+        pr.print_error("Failed to create #{directory} to store the results.")
+        pr.print_warning("Quitting!")
+        exit
+      end
+      pr.print_info("Created output directory '#{options['directory']}'")
+    end
+  else
+    options['directory'] = "."
+  end
+  options['directory'] += "/" if options['directory'][-1] != "/"
+
+  #load targets
+  sho = Showdan.new(targets, options['directory'])
   targets = sho.parse_targets
   ips = targets[0]
   domains = targets[1]
@@ -228,23 +261,23 @@ if $0 == __FILE__
     sho.lookup(domains)
   end
 
+  #start performing shodan lookups
   ports_hash = {} #hash to map ports with all IPs that have that port open, used to create files later
   ips.each do |ip|
     pr.print_info("Performing Shodan.io lookup for #{ip}...")
-    ports_hash = sho.shodan_check(ip,ports_hash)
+    ports_hash = sho.shodan_check(ip,ports_hash,options['p_info'],options['scheme'])
     puts "-" * 70
   end
 
+  #write port files containing IPs
   ports_hash.each do |port,ip_list|
-    File.open("#{opt['o']}#{port}.txt", "w") {
+    File.open("#{options['directory']}#{port}.txt", "w") {
       |f| f.puts(ip_list)
     }
   end
 
-  #TODO: change version number in logo
-  #TODO: check if -o directory exists, otherwise create it
-  #TODO: strip domain names off a bunch of stuff if present
   #TODO: add DNS lookups for domains
-  #TODO: replace getopt with option parser and deal with warning issue
+  #TODO: strip domain names off a bunch of stuff if present
+  #TODO: deal with warning issue (see top)
   #https://ruby-doc.org/stdlib-2.7.0/libdoc/optparse/rdoc/OptionParser.html
 end
