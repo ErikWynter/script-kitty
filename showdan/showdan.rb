@@ -133,7 +133,7 @@ class Showdan
       return
     end
     doc = Nokogiri::HTML(response)
-    cvss = doc.search('div.cvssbox').text
+    cvss = doc.at('div.cvssbox').text
   end
 
 
@@ -251,23 +251,24 @@ if $0 == __FILE__
 
   #if -d is provided, check if directory already exists, otherwise create it
   if options['directory']
-    system("[ -d #{options['directory']} ]") 
+    directory = options['directory']
+    system("[ -d #{directory} ]") 
     unless $?.exitstatus == 0
-      system("mkdir #{options['directory']}")
+      system("mkdir #{directory}")
       unless $?.exitstatus == 0
         pr.print_error("Failed to create #{directory} to store the results.")
         pr.print_warning("Quitting!")
         exit
       end
-      pr.print_info("Created output directory '#{options['directory']}'")
+      pr.print_info("Created output directory '#{directory}'")
     end
   else
-    options['directory'] = "."
+    directory = "."
   end
-  options['directory'] += "/" if options['directory'][-1] != "/"
+  directory += "/" if directory[-1] != "/"
 
   #load targets
-  sho = Showdan.new(targets, options['directory'])
+  sho = Showdan.new(targets, directory)
   targets = sho.parse_targets
   ips = targets[0]
   domains = targets[1]
@@ -289,7 +290,7 @@ if $0 == __FILE__
 
   #write port files containing IPs
   ports_hash.each do |port,ip_list|
-    File.open("#{options['directory']}#{port}.txt", "w") {
+    File.open("#{directory}#{port}.txt", "w") {
       |f| f.puts(ip_list)
     }
   end
