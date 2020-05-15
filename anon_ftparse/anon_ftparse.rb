@@ -3,7 +3,7 @@
 require 'optparse'
 
 def help(logo,print_help=false)
-  options = {'scheme' => 'ftparsed_'}
+  options = {'scheme' => 'ftparsed'}
   parser = OptionParser.new do |opts|
     opts.banner = "Usage: #{$0} [file1] [file2] [file3] ... [filex]"
     opts.on("-h", "--help", "Display this menu and exit") do
@@ -91,7 +91,7 @@ if $0 == __FILE__
       next
     end
     puts "#{success} #{file}: #{results.length()} FTP servers allow anonymous login."
-    out_file = directory + scheme + f_scheme
+    out_file = directory + scheme + "_" + f_scheme
     puts "#{info} Writing results to '#{out_file}'.\n"
     puts "Affected hosts:"
     hosts = results.keys

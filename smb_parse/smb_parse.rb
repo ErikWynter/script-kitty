@@ -1,92 +1,107 @@
 #!/usr/bin/env ruby
-def help()
-  puts "*" * 70 + "\n\t\t\033[01;32mSMB Parse v1.0\033[00m - \033[01;34mErik Wynter (@wyntererik)\033[00m"
-  puts "*" * 70
-  puts "\nEasily parse the results of Nmap's 'smb-enum-shares' NSE script."
-  puts "Compatible with .nmap files or copy-pasted 'smb-enum-shares' output."
-  puts "\nUsage: #{$0} [file1] [file2] [file3] ... [filex]"
-  puts "  -h\t\tDisplay this menu and exit."
-  puts "  -o [scheme]\tNaming scheme for the output file(s). For multiple\n\t\tinput files, the name of each input file is appended\n\t\tto the scheme for the respective outpute file.\n\t\tDefault scheme: 'parsed_[inputfile]'"
-  puts "\n  Example: #{$0} nmap_smb_results1.txt nmap_smb_results2.txt"
-  puts "  Example: #{$0} scan1.txt -o results"
-  exit
-end
 
-warning = "[" + "\033[01;33m" + "!" + "\033[00m" + "]"
-info = "[" + "\033[01;34m" + "*" + "\033[00m" + "]"
-success = "[" + "\033[01;32m" + "+" + "\033[00m" + "]"
-error = "[" + "\033[01;31m" + "-" + "\033[00m" + "]"
+require 'optparse'
 
-if ARGV.length() == 0
-  puts "#{warning} Please provide at least one file to parse."
-  puts "#{info} Loading help menu:"
-  help()
-end
-
-if ARGV.include? '-h'
-  if ARGV.length > 1
-    puts "#{warning} Cannot combine '-h' with other arguments. Quitting!"
-    exit
-  else
-    help()
+def help(logo,print_help=false)
+  options = {'scheme' => 'smb_parsed'}
+  parser = OptionParser.new do |opts|
+    opts.banner = "Usage: #{$0} [file1] [file2] [file3] ... [filex]"
+    opts.on("-h", "--help", "Display this menu and exit") do
+      print_help = true
+    end
+    opts.on("-d", "--dir     OUTPUT_DIRECTORY", "Directory to store results.\n\t\t\t\t     If it doesn't exist, Showdan creates it.") do |directory|
+      options['directory'] = directory;
+    end
+    opts.on("-s", "--scheme  NAMING_SCHEME", "Naming scheme for the output file(s).\n\t\t\t\t     Default: 'smbparsed_[inputfile].'\n\t\t\t\t     For multiple input files, the name of\n\t\t\t\t     each file is appended to the scheme.") do |scheme|
+      options['scheme'] = scheme;
+    end
   end
-elsif ARGV.include? '-o'
-  o_index = ARGV.find_index('-o')
-  out_scheme = ARGV[o_index + 1]
-  if out_scheme.to_s.strip.empty?
-    puts "#{warning} Option '-o' needs to be followed by a non-empty string. Quitting!"
+  parser.parse!
+
+  if print_help == true
+    logo.each { |i| puts i }
+    puts parser
+    puts "\n  Example: #{$0} nmap_smb_results1.txt nmap_smb_results2.txt"
+    puts "  Example: #{$0} scan1.txt -o results"
     exit
   end
-  args = ARGV[0...o_index] + ARGV[o_index+2...ARGV.length] #take all arguments except for -o and the argument following it
-else
-  args = ARGV
+  options
 end
 
-args.each do |file| 
-  begin
+if $0 == __FILE__
+  warning = "[" + "\033[01;33m" + "!" + "\033[00m" + "]"
+  info = "[" + "\033[01;34m" + "*" + "\033[00m" + "]"
+  success = "[" + "\033[01;32m" + "+" + "\033[00m" + "]"
+  failure = "[" + "\033[01;31m" + "-" + "\033[00m" + "]"
+
+  banner = "*" * 70 + "\n\t\t\033[01;32mSMB Parse v1.0\033[00m - \033[01;34mErik Wynter (@wyntererik)\033[00m\n" + "*" * 70
+  descr1 = "\nEasily parse the results of Nmap's 'smb-enum-shares' NSE script."
+  descr2 = "Compatible with .nmap files or copy-pasted 'smb-enum-shares' output."
+  logo = [banner,descr1,descr2] 
+
+  if ARGV.length() == 0
+    puts "#{warning} Please provide at least one file to parse."
+    puts "#{info} Loading help menu:"
+    help(logo,true)
+  end
+
+  options = help(logo) 
+  scheme = options['scheme']
+
+  if options['directory']
+      directory = options['directory']
+      system("[ -d #{directory} ]") 
+      unless $?.exitstatus == 0
+        system("mkdir #{directory}")
+        unless $?.exitstatus == 0
+          puts("#{failure} Failed to create #{directory} to store the results.")
+          puts("#{warning} Quitting!")
+          exit
+        end
+        puts("#{info}Created output directory '#{directory}'")
+      end
+    else
+      directory = "."
+    end
+    directory += "/" if directory[-1] != "/"
+
+  ARGV.each do |file| 
     results = {}
-    null_session_ct = 0
-    hosts_info = File.open(file).read.split("report for ")
-    hosts_info.shift
-    hosts_info.each do |data|
-      if data.include? "Anonymous access: READ"
-        ip = data.split("\n")[0]
-        results[ip] = []
-        shares = data.split("\\\\")
-        shares.shift
-        shares.each do |s|
-          lines = s.split("\n")
-          share = lines[0].strip().gsub(":","")
-          lines.each do |l|
-            if l.include? 'Anonymous access: R'
-              anon_access = l.split(": ")[1]
-              unless l.split(": ")[1] == nil
-                results[ip].append([share,anon_access])
-                null_session_ct += 1
+    begin
+      if file.include? "/"
+        f_scheme = file.split("/")
+        f_scheme = f_scheme[f_scheme.length() -1]
+      end
+      null_session_ct = 0
+      hosts_info = File.open(file).read.split("report for ") #split file contents into chunkcs for each host
+      hosts_info.shift #remove nmap initiation info
+      unless hosts_info.to_s.include? "Anonymous access: READ"
+        puts "#{failure} #{file}: Did not find shares allowing null session authentication."
+        next
+      end
+      hosts_info.each do |data|
+        if data.include? "Anonymous access: READ"
+          ip = data.split("\n")[0]
+          results[ip] = []
+          shares = data.split("\\\\")
+          shares.shift
+          shares.each do |s|
+            lines = s.split("\n")
+            share = lines[0].strip().gsub(":","")
+            lines.each do |l|
+              if l.include? "Anonymous access: READ"
+                anon_access = l.split(": ")[1]
+                unless l.split(": ")[1] == nil
+                  results[ip].append([share,anon_access])
+                  null_session_ct += 1
+                end
               end
             end
           end
         end
       end
-    end
-    if results.length() == 0
-      failure = "[" + "\033[01;31m" + "-" + "\033[00m" + "]"
-      puts "#{failure} #{file}: Did not find shares allowing null session authentication."
-    else
-      if file.include? "/"
-        file = file.split("/")
-        file = file[file.length() -1]
-      end
-      if out_scheme
-        if args.length() > 1
-          out_file = out_scheme + "_" + file
-        else
-          out_file = out_scheme
-        end
-      else
-        out_file = "parsed_" + file
-      end
       puts "#{success} #{file}: #{null_session_ct} shares accross #{results.length()} hosts allow null session authentication."
+      out_file = directory + scheme + "_" + f_scheme
       puts "#{info} Writing results to '#{out_file}'.\n"
       puts "Affected hosts:"
       hosts = results.keys
