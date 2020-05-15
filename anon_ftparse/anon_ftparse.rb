@@ -91,6 +91,7 @@ if $0 == __FILE__
       next
     end
     puts "#{success} #{file}: #{results.length()} FTP servers allow anonymous login."
+    scheme = scheme.delete_suffix('_') #remove "_" from end of scheme if present to prevent getting "_" twice in a row
     out_file = directory + scheme + "_" + f_scheme
     puts "#{info} Writing results to '#{out_file}'.\n"
     puts "Affected hosts:"
