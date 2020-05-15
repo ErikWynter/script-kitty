@@ -21,7 +21,7 @@ def help(logo,print_help=false)
     opts.on("-t", "--targets TARGETS", "Comma-separated list of target IP addresses\n\n    OPTIONAL:") do |targets|
       options['targets'] = targets;
     end
-    opts.on("-d", "--dir     OUTPUT_DIRECTORY", "Directory to store results. If it doesn't exit, Showdan will create it.") do |directory|
+    opts.on("-d", "--dir     OUTPUT_DIRECTORY", "Directory to store results. If it doesn't exit, shoWdan will create it.") do |directory|
       options['directory'] = directory;
     end
     opts.on("-s", "--scheme  NAMING_SCHEME", "Naming scheme for the output file(s). Default: '[IP]_showdan.txt'") do |scheme|
