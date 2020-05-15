@@ -1,17 +1,17 @@
-# ShoWdan v1.0
+# shoWdan v1.0
 **About**
 
-- ShoWdan is a simple web scraper that uses the Shodan.io web interface to find information about Internet-facing ports and potential CVEs for specific IPs. It will also obtain the CVSS score for each CVE by querying cvedetails.com.
+- shoWdan is a simple web scraper that uses the Shodan.io web interface to find information about Internet-facing ports and potential CVEs for specific IPs. It will also obtain the CVSS score for each CVE by querying cvedetails.com.
 - Creates a file containing a list of open ports and, if listed by Shodan.io, potential CVEs with their CVSS score and description. Users can also obtain a file containing detailed port information (eg HTTP headers, SSL certificates, encryption algorithms).
 - Creates files for open ports (eg '80.txt', '443.txt') containing a list of all IPs with that port exposed. These files can be used to run additional tests, such as Nmap script scans or Metasploit modules.
-- ShoWdan makes it easy for penetration testers / red teamers to obtain basic Shodan.io information about client systems during an external assessment, and may also be useful for sysadmins, blue teamers, and anyone else interested in monitoring their organization's Internet exposure.
+- shoWdan makes it easy for penetration testers / red teamers to obtain basic Shodan.io information about client systems during an external assessment, and may also be useful for sysadmins, blue teamers, and anyone else interested in monitoring their organization's Internet exposure.
 
 **Installation**
 
 - Clone the repository or download the raw file to your system.
 - Make the file executable with `chmod +x showdan.rb`
 - Copy or move the file to your path, eg `cp showdan.rb /usr/local/bin`
-- Run ShoWdan: `showdan.rb [your arguments]`
+- Run shoWdan: `showdan.rb [your arguments]`
 
 Alternatively, you can run it immediately after downloading by invoking Ruby:
 - `ruby showdan.rb [your arguments]`
@@ -26,7 +26,7 @@ Options:
 - -t, --targets TARGETS            Comma-separated list of target IP addresses
 
 OPTIONAL:
-- -d, --dir     OUTPUT_DIRECTORY   Directory to store results. If it doesn't exit, Showdan will create it.
+- -d, --dir     OUTPUT_DIRECTORY   Directory to store results. If it doesn't exit, shoWdan will create it.
 - -s, --scheme  NAMING_SCHEME      Naming scheme for the output file(s). Default: '[IP]_showdan.txt'
 - -p, --p_info                     Write detailed port info listed by Shodan.io (eg HTTP headers) to a file.
 
