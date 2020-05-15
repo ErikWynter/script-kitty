@@ -3,7 +3,7 @@
 require 'optparse'
 
 def help(logo,print_help=false)
-  options = {'scheme' => 'smb_parsed'}
+  options = {'scheme' => 'smbparsed'}
   parser = OptionParser.new do |opts|
     opts.banner = "Usage: #{$0} [file1] [file2] [file3] ... [filex]"
     opts.on("-h", "--help", "Display this menu and exit") do
@@ -68,10 +68,6 @@ if $0 == __FILE__
   ARGV.each do |file| 
     results = {}
     begin
-      if file.include? "/"
-        f_scheme = file.split("/")
-        f_scheme = f_scheme[f_scheme.length() -1]
-      end
       null_session_ct = 0
       hosts_info = File.open(file).read.split("report for ") #split file contents into chunkcs for each host
       hosts_info.shift #remove nmap initiation info
@@ -101,8 +97,19 @@ if $0 == __FILE__
         end
       end
       puts "#{success} #{file}: #{null_session_ct} shares accross #{results.length()} hosts allow null session authentication."
-      scheme = scheme.delete_suffix('_') #remove "_" from end of scheme if present to prevent getting "_" twice in a row
-      out_file = directory + scheme + "_" + f_scheme
+      if ARGV.length() == 1
+        if scheme == "smb_parsed"
+          scheme += ".txt"
+        end
+        out_file = directory + scheme
+      else
+        if file.include? "/"
+          f_scheme = file.split("/")
+          f_scheme = f_scheme[f_scheme.length() -1]
+        end
+        scheme = scheme.delete_suffix('_') #remove prevent getting "_" twice in a row at the end of scheme
+        out_file = directory + scheme + "_" + f_scheme
+      end
       puts "#{info} Writing results to '#{out_file}'.\n"
       puts "Affected hosts:"
       hosts = results.keys

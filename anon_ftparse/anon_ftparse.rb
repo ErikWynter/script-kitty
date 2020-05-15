@@ -68,10 +68,6 @@ if $0 == __FILE__
   ARGV.each do |file| 
     results = {}
     begin
-      if file.include? "/"
-        f_scheme = file.split("/")
-        f_scheme = f_scheme[f_scheme.length() -1]
-      end
       hosts_info = File.open(file).read.split("report for ") #split file contents into chunkcs for each host
       hosts_info.shift #remove nmap initiation info
       unless hosts_info.to_s.include? "Anonymous FTP login allowed"
@@ -91,8 +87,19 @@ if $0 == __FILE__
       next
     end
     puts "#{success} #{file}: #{results.length()} FTP servers allow anonymous login."
-    scheme = scheme.delete_suffix('_') #remove "_" from end of scheme if present to prevent getting "_" twice in a row
-    out_file = directory + scheme + "_" + f_scheme
+    if ARGV.length() == 1
+      if scheme == "ftparsed"
+        scheme += ".txt"
+      end
+      out_file = directory + scheme
+    else
+      if file.include? "/"
+        f_scheme = file.split("/")
+        f_scheme = f_scheme[f_scheme.length() -1]
+      end
+      scheme = scheme.delete_suffix('_') #remove prevent getting "_" twice in a row at the end of scheme
+      out_file = directory + scheme + "_" + f_scheme
+    end
     puts "#{info} Writing results to '#{out_file}'.\n"
     puts "Affected hosts:"
     hosts = results.keys

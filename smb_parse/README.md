@@ -20,22 +20,24 @@ Alternatively, you can run it immediately after downloading by invoking Ruby:
 
 
 Options:
-- -h : Display the help menu and exit.
-- -o [scheme] : Naming scheme for the output file(s). For multiple input files, the name of each input file is appended to the scheme for the respective outpute file. Default scheme: 'parsed_[inputfile]'
+    -h, --help                       Display this menu and exit
+    -d, --dir     OUTPUT_DIRECTORY   Directory to store results. If it doesn't exist, Showdan creates it.
+    -s, --scheme  NAMING_SCHEME      Naming scheme for the output file(s).Default: 'smbparsed_[inputfile].' For multiple input files, the name of each file is appended to the scheme.
+
 
 Example usage:
-- `smb_parse.rb nmap_smb_results1.txt nmap_smb_results2.txt`
-  - The parsed results will be written to 'parsed_nmap_smb_results1.txt' and 'parsed_nmap_smb_results2.txt'
-- `smb_parse.rb scan1.txt -o results.txt`
-  - The parsed results will be written to 'results.txt'
-- `smb_parse.rb -o results nmap1.txt nmap2.txt`
-  - The parsed results will be written to 'results_nmap1.txt' and 'results_nmap2.txt'
+- `smb_parse.rb nmap_results1.txt nmap_results2.txt`
+  - The parsed results will be written to 'smbparsed_nmap_results1.txt' and 'smbparsed_nmap_results2.txt'
+- `smb_parse.rb scan.txt -s results -d /tmp`
+  - The parsed results will be written to '/tmp/results'
+- `smb_parse.rb -s results smb1.nmap smb2.nmap -d /tmp`
+  - The parsed results will be written to '/tmp/results_smb1.nmap' and '/tmp/results_smb2.nmap'
 
 **Example output**
 ```
-smb_parse.rb -o results scan1.nmap scan2.nmap 
+smb_parse.rb -s results scan1.nmap scan2.nmap -d /tmp
 [+] scan1.nmap: 4 shares accross 2 hosts allow null session authentication.
-[*] Writing results to 'results_scan1.nmap'.
+[*] Writing results to '/tmp/results_scan1.nmap'.
 Affected hosts:
 192.168.1.16   192.168.1.17
 --------------------------------------------------------------
@@ -48,7 +50,7 @@ Affected hosts:
 |-Share: 192.168.1.17\test      - Anonymous access: READ/WRITE
 --------------------------------------------------------------
 [+] scan2.nmap: 17 shares accross 6 hosts allow null session authentication.
-[*] Writing results to 'results_scan2.nmap'.
+[*] Writing results to '/tmp/results_scan2.nmap'.
 Affected hosts:
 192.168.1.22   192.168.1.27   192.168.1.23   192.168.1.24   192.168.1.25
 192.168.1.26
@@ -98,4 +100,4 @@ cat results_scan1.nmap
 ```
 **Dependencies**
 
-None, zip, nada. Isn't that wonderful?
+- 'optparse' (installed by default)
