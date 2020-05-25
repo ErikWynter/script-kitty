@@ -144,12 +144,19 @@ class Showdan
     url = "https://shodan.io/host/"+ip.to_s
     response = HTTParty.get(url)
     if response.body.nil? || response.body.empty?
-      return
+      @pr.print_error("IP: #{ip} - Shodan did not return a response.")
+      return [ports_hash, cve_hash]
     end
     doc = Nokogiri::HTML(response)
 
     ports_info_hash = {}
     ports_info = doc.css("li.service.service-long")
+
+    unless ports_info && ports_info.length() > 0
+      @pr.print_error("IP: #{ip} - No open ports found.")
+      return [ports_hash, cve_hash]
+    end
+
     ports_info.each do |port|
       no = port.css("div.port").text
       prot = port.css("div.protocol").text
@@ -162,6 +169,8 @@ class Showdan
         ports_hash[no].append(ip)
       end
     end
+
+
 
     File.open(out_file, "w") {
       |f| puts "-" *70 + "\n|IP: #{ip}\n|"
