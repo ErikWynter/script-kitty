@@ -21,7 +21,7 @@ Alternatively, you can run it immediately after downloading by invoking Ruby:
 
 Options:
     -h, --help                       Display this menu and exit
-    -d, --dir     OUTPUT_DIRECTORY   Directory to store results. If it doesn't exist, Showdan creates it.
+    -d, --dir     OUTPUT_DIRECTORY   Directory to store results. If it doesn't exist, SMB Parse creates it.
     -s, --scheme  NAMING_SCHEME      Naming scheme for the output file(s).Default: 'smbparsed_[inputfile].' For multiple input files, the name of each file is appended to the scheme.
 
 

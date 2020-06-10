@@ -3,7 +3,7 @@
 require 'optparse'
 
 def help(logo,print_help=false)
-  options = {'scheme' => 'httparsed'}
+  options = {'scheme' => 'httparsed','directory' => '.'}
   parser = OptionParser.new do |opts|
     opts.banner = "Usage: #{$0} [file1] [file2] [file3] ... [filex]"
     opts.on("-h", "--help", "Display this menu and exit") do
@@ -12,7 +12,7 @@ def help(logo,print_help=false)
     opts.on("-d", "--dir     OUTPUT_DIRECTORY", "Directory to store results.\n\t\t\t\t     If it doesn't exist, Showdan creates it.") do |directory|
       options['directory'] = directory;
     end
-    opts.on("-s", "--scheme  NAMING_SCHEME", "Naming scheme for the output file(s).\n\t\t\t\t     Default: 'ftparsed_[inputfile].'\n\t\t\t\t     For multiple input files, the name of\n\t\t\t\t     each file is appended to the scheme.") do |scheme|
+    opts.on("-s", "--scheme  NAMING_SCHEME", "Naming scheme for the output file(s).\n\t\t\t\t     Default: 'httparsed_[inputfile].'\n\t\t\t\t     For multiple input files, the name of\n\t\t\t\t     each file is appended to the scheme.") do |scheme|
       options['scheme'] = scheme;
     end
   end
@@ -21,7 +21,7 @@ def help(logo,print_help=false)
   if print_help == true
     logo.each { |i| puts i }
     puts parser
-    puts "\n  Example: #{$0} nmap_ftp_results1.txt nmap_ftp_results2.txt"
+    puts "\n  Example: #{$0} nmap_http_results1.txt nmap_http_results2.txt"
     puts "  Example: #{$0} scan1.txt -o results"
     exit
   end
@@ -44,8 +44,8 @@ if $0 == __FILE__
   failure = "[" + "\033[01;31m" + "-" + "\033[00m" + "]"
 
   banner = "*" * 70 + "\n\t\t\033[01;32mHTTP Parse v1.0\033[00m - \033[01;34mErik Wynter (@wyntererik)\033[00m\n" + "*" * 70
-  descr1 = "\nEasily parse the results of Nmap's 'http-title' and 'http-methods' NSE scripts."
-  descr2 = "Compatible with .nmap files or copy-pasted 'http-title' and 'http-methods' output."
+  descr1 = "\nEasily parse the results of Nmap's 'http-methods' NSE script."
+  descr2 = "Compatible with .nmap files or copy-pasted 'http-methods' output."
   logo = [banner,descr1,descr2] 
 
   if ARGV.length() == 0
@@ -57,9 +57,9 @@ if $0 == __FILE__
   options = help(logo) 
   scheme = options['scheme']
 
-  if options['directory']
-      directory = options['directory']
-      system("[ -d #{directory} ]") 
+  directory = options['directory']
+  unless directory == '.'
+    system("[ -d #{directory} ]") 
       unless $?.exitstatus == 0
         system("mkdir #{directory}")
         unless $?.exitstatus == 0
@@ -67,12 +67,11 @@ if $0 == __FILE__
           puts("#{warning} Quitting!")
           exit
         end
-        puts("#{info}Created output directory '#{directory}'")
       end
-    else
-      directory = "."
-    end
-    directory += "/" if directory[-1] != "/"
+    puts("#{info}Created output directory '#{directory}'")
+  end
+
+directory += "/" if directory[-1] != "/"
 
   ARGV.each do |file| 
     results = {}
@@ -111,7 +110,7 @@ if $0 == __FILE__
                     title = line.split("title: ")[1]
                   end
                 end
-              elsif ct == 3
+              elsif ct == 3 #to print the last entry in case there is one at the end of the file
                 results = add_results(results,ip,port,risky_methods,title)
               end
             end
@@ -124,7 +123,7 @@ if $0 == __FILE__
       puts "#{warning} Please provide only .nmap files or files containing copy-pasted Nmap output.\n\n"
       next
     end
-    puts "#{success} #{file}: Found HTTP titles and/or risky methods for #{results.length()} hosts."
+    puts "#{success} #{file}: Found risky HTTP methods for #{results.length()} hosts."
     if ARGV.length() == 1
       if scheme == "httparsed"
         scheme += ".txt"
@@ -134,6 +133,8 @@ if $0 == __FILE__
       if file.include? "/"
         f_scheme = file.split("/")
         f_scheme = f_scheme[f_scheme.length() -1]
+      else
+        f_scheme = file
       end
       scheme = scheme.delete_suffix('_') #remove prevent getting "_" twice in a row at the end of scheme
       out_file = directory + scheme + "_" + f_scheme

@@ -96,6 +96,8 @@ if $0 == __FILE__
       if file.include? "/"
         f_scheme = file.split("/")
         f_scheme = f_scheme[f_scheme.length() -1]
+      else
+        f_scheme = file
       end
       scheme = scheme.delete_suffix('_') #remove prevent getting "_" twice in a row at the end of scheme
       out_file = directory + scheme + "_" + f_scheme
