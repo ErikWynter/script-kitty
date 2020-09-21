@@ -3,14 +3,20 @@
 require 'optparse'
 
 def help(logo,help=false)
-  options = {'directory' => './'}
+  options = {'directory' => './', 'scripts' => 'true', 'enum_dir' => './enum' }
   parser = OptionParser.new do |opts|
     opts.banner = "Usage: #{$0} [file1] [file2] [file3] ... [filex]"
     opts.on("-h", "--help", "Display this menu and exit") do
       pr.print_help = true
     end
-    opts.on("-d", "--dir     OUTPUT_DIRECTORY", "Directory to store results.\n\t\t\t\t     If it doesn't exist, PSP creates it.") do |directory|
+    opts.on("-d", "--dir      OUTPUT DIRECTORY", "Directory to store results. If it\n\t\t\t\t     doesn't exist, PSP creates it.") do |directory|
       options['directory'] = directory;
+    end
+    opts.on("-s", "--scripts  RUN SCRIPT SCANS", "Perform Nmap script scans against\n\t\t\t\t     discovered ports (default).\n\t\t\t\t     Disable with value `false`.") do |scripts|
+      options['scripts'] = scripts;
+    end
+    opts.on("-e", "--enum_dir ENUM DIRECTORY", "Directory to store the result of\n\t\t\t\t     enumeration via Nmap script scans.\n\t\t\t\t     Default: `./enum`.") do |enum_dir|
+      options['enum_dir'] = enum_dir;
     end
   end
   parser.parse!
@@ -20,6 +26,7 @@ def help(logo,help=false)
     puts parser
     puts "\n  Example: #{$0} scan.nmap ports.gnmap"
     puts "  Example: #{$0} portscan.nmap -d /tmp/port_files"
+    puts "  Example: #{$0} portscan.nmap -s false"
     exit
   end
   options
@@ -142,7 +149,6 @@ class Parser
   def write_files(results,directory)
     ip_arr = results[0]
     port_hash = results[1]
-    ip_hash = results[2]
     file_base = @file.sub(/\.[^.]+\z/, '')
     file_base = file_base.split("/")
     file_base = file_base[file_base.length-1]
@@ -169,6 +175,82 @@ class Parser
   end
 end
 
+class Script_scans
+  def initialize(parse_results,directory,enum_dir)
+    @pr = Color_print.new()
+    @directory = directory
+    @enum_dir = enum_dir
+    @port_hash = parse_results[1]
+    @script_hash = {
+      '21' => ['FTP', 'ftp-anon'],
+      '25' => ['SMTP', 'smtp-open-relay'],
+      '445' => ['SMB', 'smb-security-mode,smb-enum-domains,smb-enum-shares,smb-system-info,smb-os-discovery,smb-vuln-cve-2017-7494'],
+      '111' => ['NFS', 'nfs-ls,nfs-showmount,nfs-statfs'],
+      '161' => ['SNMP', 'snmp-processes'],
+      '389' => ['LDAP', 'ldap-rootdse'],
+      '1433' => ['MSSQL', 'ms-sql-empty-password,ms-sql-info,ms-sql-ntlm-info'],
+      '3306' => ['MYSQL', 'mysql-empty-password,mysql-info'],
+      '1521' => ['ORACLE_TNS', 'oracle-tns-version'],
+      '80' => ['HTTP', 'http-headers,http-put,http-methods,http-robots.txt,http-shellshock,http-title'],
+      '81' => ['HTTP(S)', 'http-headers,http-put,http-methods,http-robots.txt,http-shellshock,http-title,ssl-cert'],
+      '8000' => ['HTTP(S)', 'http-headers,http-put,http-methods,http-robots.txt,http-shellshock,http-title,ssl-cert'],
+      '8001' => ['HTTP(S)', 'http-headers,http-put,http-methods,http-robots.txt,http-shellshock,http-title,ssl-cert'],
+      '8002' => ['HTTP(S)', 'http-headers,http-put,http-methods,http-robots.txt,http-shellshock,http-title,ssl-cert'],
+      '8080' => ['HTTP(S)', 'http-headers,http-put,http-methods,http-robots.txt,http-shellshock,http-title,ssl-cert'],
+      '8081' => ['HTTP(S)', 'http-headers,http-put,http-methods,http-robots.txt,http-shellshock,http-title,ssl-cert'],
+      '8082' => ['HTTP(S)', 'http-headers,http-put,http-methods,http-robots.txt,http-shellshock,http-title,ssl-cert'],
+      '8083' => ['HTTP(S)', 'http-headers,http-put,http-methods,http-robots.txt,http-shellshock,http-title,ssl-cert'],
+      '8084' => ['HTTP(S)', 'http-headers,http-put,http-methods,http-robots.txt,http-shellshock,http-title,ssl-cert'],
+      '8085' => ['HTTP(S)', 'http-headers,http-put,http-methods,http-robots.txt,http-shellshock,http-title,ssl-cert'],
+      '8086' => ['HTTP(S)', 'http-headers,http-put,http-methods,http-robots.txt,http-shellshock,http-title,ssl-cert'],
+      '8087' => ['HTTP(S)', 'http-headers,http-put,http-methods,http-robots.txt,http-shellshock,http-title,ssl-cert'],
+      '8088' => ['HTTP(S)', 'http-headers,http-put,http-methods,http-robots.txt,http-shellshock,http-title,ssl-cert'],
+      '8089' => ['HTTP(S)', 'http-headers,http-put,http-methods,http-robots.txt,http-shellshock,http-title,ssl-cert'],
+      '8090' => ['HTTP(S)', 'http-headers,http-put,http-methods,http-robots.txt,http-shellshock,http-title,ssl-cert'],
+      '9090' => ['HTTP(S)', 'http-headers,http-put,http-methods,http-robots.txt,http-shellshock,http-title,ssl-cert'],
+      '8181' => ['HTTP(S)', 'http-headers,http-put,http-methods,http-robots.txt,http-shellshock,http-title,ssl-cert'],
+      '2301' => ['HTTP', 'http-headers,http-put,http-methods,http-robots.txt,http-shellshock,http-title'],
+      '443' => ['HTTPS', 'http-headers,http-put,http-methods,http-robots.txt,http-shellshock,http-title,ssl-cert'],
+      '8443' => ['HTTPS', 'http-headers,http-put,http-methods,http-robots.txt,http-shellshock,http-title,ssl-cert'],
+      '2443' => ['HTTPS', 'http-headers,http-put,http-methods,http-robots.txt,http-shellshock,http-title,ssl-cert']
+    }
+  end
+
+  def run_scripts
+    @http_ports = []
+    @port_hash.each do |port,ip_list|
+      if @script_hash.include?(port)
+        protocol = @script_hash[port][0]
+        scripts = @script_hash[port][1]
+        if scripts.split(",").length > 1
+          if protocol.include?("HTTP")
+            @script_out_file = "#{protocol.split('(S)')[0]}-#{port}-scripts"
+          else
+            @script_out_file = "#{protocol.downcase}-scripts"
+          end
+        else
+          @script_out_file = scripts
+        end
+        @pr.print_info("Launching Nmap scripts for #{protocol}...")
+        `nmap --disable-arp-ping -Pn -n -vv -p #{port} -oA #{@enum_dir}#{@script_out_file} -iL #{@directory}#{port}.txt`
+      end
+    end
+   end  
+
+  def create_enum_dir
+    system("[ -d #{@enum_dir} ]") 
+    unless $?.exitstatus == 0
+      system("mkdir #{@enum_dir}")
+      unless $?.exitstatus == 0
+        @pr.print_failure("Failed to create #{@enum_dir} to store the script scan results.")
+        @pr.print_warning("Quitting!")
+        exit
+      end
+      @pr.print_info("Created directory '#{@enum_dir}' to store the script scan results")
+    end
+  end
+end
+
 if $0 == __FILE__
   warning = "[" + "\033[01;33m" + "!" + "\033[00m" + "]"
   info = "[" + "\033[01;34m" + "*" + "\033[00m" + "]"
@@ -182,7 +264,7 @@ if $0 == __FILE__
 
   pr = Color_print.new()
 
-  if ARGV.length() == 0
+  if ARGV.length == 0
     pr.print_warning("Please provide at least one file to parse.")
     pr.print_info("Loading help menu:")
     help(logo,true)
@@ -201,7 +283,11 @@ if $0 == __FILE__
     end
     pr.print_info("Created output directory '#{directory}'")
   end
-  directory += "/" if directory[-1] != "/"
+  directory << "/" if directory[-1] != "/"
+
+  scripts = options['scripts']
+  enum_dir = options['enum_dir']
+  enum_dir << "/" if enum_dir[-1] != "/"
 
   pr.print_info("Getting ready...")
   file = ARGV[0]
@@ -232,5 +318,17 @@ if $0 == __FILE__
     pr.print_warning("Please provide only .nmap and .gnmap files.\n\n")
     raise
   end
+
+  begin
+    if scripts == 'true' && results.length > 0
+      script = Script_scans.new(results, directory, enum_dir)
+      script.create_enum_dir
+      script.run_scripts
+    end
+  rescue
+    pr.print_failure("The following error occurred while trying to run Nmap script scans.")
+    raise
+  end
+    
   pr.print_info("No tasks left. Time for a well-deserved nap.")
 end
