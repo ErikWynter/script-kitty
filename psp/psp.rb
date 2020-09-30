@@ -232,7 +232,7 @@ class Script_scans
           @script_out_file = scripts
         end
         @pr.print_info("Launching Nmap scripts for #{protocol}...")
-        `nmap --disable-arp-ping -Pn -n -vv -p #{port} -oA #{@enum_dir}#{@script_out_file} -iL #{@directory}#{port}.txt`
+        `nmap --disable-arp-ping -Pn -n -vv -p #{port} --script #{scripts} -oA #{@enum_dir}#{@script_out_file} -iL #{@directory}#{port}.txt`
       end
     end
    end  
